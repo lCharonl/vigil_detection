@@ -11,12 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py ./
 COPY src ./src
 
-RUN useradd --system --uid 10001 vigil \
-    && mkdir /data \
-    && chown vigil /data
+RUN useradd --system --uid 10001 vigil
 
 USER vigil
-VOLUME /data
+EXPOSE 8000
 
 ENTRYPOINT ["python", "main.py"]
-CMD ["--output-file", "/data/alerts.jsonl", "--archive", "--archive-dir", "/data/archive"]
+CMD ["--host", "0.0.0.0"]

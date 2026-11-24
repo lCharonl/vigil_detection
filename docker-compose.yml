@@ -15,13 +15,7 @@ services:
       - "${VIGIL_THRESHOLD:-50}"
       - --workers
       - "${VIGIL_WORKERS:-1}"
-      - --output-file
-      - /data/alerts.jsonl
-      - --archive
-      - --archive-dir
-      - /data/archive
-    volumes:
-      - vigil-data:/data
-
-volumes:
-  vigil-data:
+      - --host
+      - 0.0.0.0
+    ports:
+      - "8000:8000"
