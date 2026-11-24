@@ -1,37 +1,24 @@
-"""Alert delivery to the terminal or a file."""
+"""Alert delivery to the terminal and the live stream."""
 
-import asyncio
 import sys
-from pathlib import Path
 
-from src.output.archiver import AlertArchiver
+from src.output.stream_server import AlertBroadcaster
 
 
 class AlertDispatcher:
-    """Write alerts to stdout, a JSON Lines file and/or the hourly archive."""
+    """Write alerts to stdout and publish them to the stream clients."""
 
     def __init__(
         self,
-        file_path: str | Path | None = None,
         to_terminal: bool = True,
-        archiver: AlertArchiver | None = None,
+        broadcaster: AlertBroadcaster | None = None,
     ) -> None:
-        self._file_path = Path(file_path) if file_path else None
         self._to_terminal = to_terminal
-        self._archiver = archiver
-        self._lock = asyncio.Lock()
+        self._broadcaster = broadcaster
 
     async def dispatch(self, alert: str) -> None:
         """Emit an alert to every configured output."""
         if self._to_terminal:
             print(alert, file=sys.stdout, flush=True)
-        if self._file_path is not None:
-            async with self._lock:
-                await asyncio.to_thread(self._append, alert)
-        if self._archiver is not None:
-            await self._archiver.write(alert)
-
-    def _append(self, alert: str) -> None:
-        """Append one line to the output file."""
-        with self._file_path.open("a", encoding="utf-8") as fh:
-            fh.write(alert + "\n")
+        if self._broadcaster is not None:
+            self._broadcaster.publish(alert)

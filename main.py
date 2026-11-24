@@ -9,9 +9,9 @@ from src.engine.rules_brand import load_brand_index, load_typosquat_index
 from src.engine.scorer import Scorer
 from src.engine.whitelist import Whitelist
 from src.ingestion.certstream_ws import DEFAULT_URL, CertstreamClient
-from src.output.archiver import AlertArchiver
 from src.output.dispatcher import AlertDispatcher
 from src.output.formatter import AlertFormatter
+from src.output.stream_server import AlertBroadcaster, StreamServer
 
 logger = logging.getLogger("vigil")
 
@@ -46,22 +46,14 @@ async def run(args: argparse.Namespace) -> None:
     queue = QueueManager(maxsize=args.queue_size)
     scorer = Scorer(threshold=args.threshold, whitelist=Whitelist.from_file(args.whitelist))
     formatter = AlertFormatter()
-    archiver = (
-        AlertArchiver(args.archive_dir, retention_days=args.archive_retention_days)
-        if args.archive
-        else None
-    )
-    dispatcher = AlertDispatcher(file_path=args.output_file, archiver=archiver)
+    broadcaster = AlertBroadcaster()
+    server = StreamServer(broadcaster, host=args.host, port=args.port)
+    dispatcher = AlertDispatcher(broadcaster=broadcaster)
     client = CertstreamClient(queue, url=args.url)
 
     tasks = [
         asyncio.create_task(client.run(), name="ingestion"),
         asyncio.create_task(stats_reporter(queue, args.stats_interval), name="stats"),
-        *(
-            [asyncio.create_task(archiver.run_maintenance(), name="archive")]
-            if archiver is not None
-            else []
-        ),
         *(
             asyncio.create_task(
                 engine_worker(queue, scorer, formatter, dispatcher),
@@ -71,12 +63,14 @@ async def run(args: argparse.Namespace) -> None:
         ),
     ]
 
+    await server.start()
     try:
         await asyncio.gather(*tasks)
     finally:
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        await server.stop()
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,19 +78,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--url", default=DEFAULT_URL, help="CertStream server URL")
     parser.add_argument("--threshold", type=int, default=50, help="minimum score to raise an alert")
     parser.add_argument("--whitelist", default=None, help="YAML file of whitelist regexes")
-    parser.add_argument("--output-file", default=None, help="JSON Lines output file")
-    parser.add_argument(
-        "--archive",
-        action="store_true",
-        help="enable hourly archive, daily zip and retention purge",
-    )
-    parser.add_argument("--archive-dir", default="archive", help="archive root directory")
-    parser.add_argument(
-        "--archive-retention-days",
-        type=int,
-        default=30,
-        help="days of zipped archives to keep",
-    )
+    parser.add_argument("--host", default="127.0.0.1", help="stream server bind address")
+    parser.add_argument("--port", type=int, default=8000, help="stream server port")
     parser.add_argument("--queue-size", type=int, default=10000, help="queue capacity")
     parser.add_argument("--workers", type=int, default=1, help="number of engine consumers")
     parser.add_argument("--stats-interval", type=float, default=60.0, help="stats reporting interval (s)")
