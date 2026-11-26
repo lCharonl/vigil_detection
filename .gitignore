@@ -219,6 +219,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-
+#local files
 tmp/
-alerts.jsonl
+data/
+fetch_archives.sh
