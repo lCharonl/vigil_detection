@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 Rule = Callable[[ParsedDomain, CertEvent], tuple[int, str]]
 
 BRAND_RULES: tuple[Rule, ...] = (
-    rules_brand.check_allowlist,
     rules_brand.check_typosquatting,
     rules_brand.check_brand_in_subdomain,
 )

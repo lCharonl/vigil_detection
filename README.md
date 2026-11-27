@@ -3,7 +3,7 @@
 Real-time phishing detection from the Certificate Transparency feed (CertStream).
 Modular asynchronous Python MVP, built as an event-driven producer-consumer architecture.
 
-Heuristics are hard-coded in Python and kept separate from network ingestion. The heuristic functions ship **empty** (`return 0, ""`): they are yours to implement (see [ADDING_HEURISTICS.md](ADDING_HEURISTICS.md)).
+Heuristics are hard-coded in Python and kept separate from network ingestion. See [HEURISTICS.md](HEURISTICS.md) for the list of active rules, and [ADDING_HEURISTICS.md](ADDING_HEURISTICS.md) to add one.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ vigil_v2/
     ├── ingestion/certstream_ws.py   WebSocket, JSON cleaning, publishing
     ├── engine/
     │   ├── domain_parser.py         FQDN → root / subdomains / TLD (tldextract)
-    │   ├── rules_brand.py           Brand heuristics (allowlist, typosquatting)
+    │   ├── rules_brand.py           Brand heuristics (typosquatting, brand in subdomain)
     │   ├── rules_context.py         Contextual heuristics (keywords, TLD, CA)
     │   └── scorer.py                Orchestrator, accumulates points
     └── output/
@@ -95,7 +95,7 @@ python main.py --url ws://localhost:8080/ --threshold 50
 | `--stats-interval` | `60` | Statistics log period (s) |
 | `--verbose` | disabled | DEBUG logs |
 
-As long as the heuristics are empty, every score is 0 and no alert is raised (except with `--threshold 0`, handy to test the pipeline end to end).
+Use `--threshold 0` to see every domain with its score, handy to test the pipeline end to end.
 
 ## Docker
 
