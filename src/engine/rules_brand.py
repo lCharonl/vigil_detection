@@ -93,10 +93,6 @@ def _is_legit_domain(fqdn: str, legit_domains: frozenset[str]) -> bool:
     return any(".".join(labels[i:]) in legit_domains for i in range(len(labels)))
 
 
-def check_allowlist(parsed: ParsedDomain, event: CertEvent) -> tuple[int, str]:
-    """Recognize legitimate brand domains; may return a negative score."""
-    return 0, ""
-
 
 def check_typosquatting(parsed: ParsedDomain, event: CertEvent) -> tuple[int, str]:
     """Match the FQDN or a parent domain against known typosquatting variants."""
